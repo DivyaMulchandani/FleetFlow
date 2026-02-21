@@ -1,55 +1,43 @@
-// src/lib/db.js
-// ─────────────────────────────────────────────────────────────
-// PostgreSQL connection pool — shared across the entire app.
-// Next.js can hot-reload in dev, so we cache the pool on the
-// global object to avoid creating a new pool on every reload.
-// ─────────────────────────────────────────────────────────────
-
 import { Pool } from 'pg';
+import { z } from 'zod';
 
-const poolConfig = {
-  host:     process.env.DB_HOST,
-  port:     parseInt(process.env.DB_PORT || '5432'),
-  database: process.env.DB_NAME,
-  user:     process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  max:      10,              // max connections in pool
-  idleTimeoutMillis: 30000, // close idle connections after 30s
-  connectionTimeoutMillis: 2000,
-};
+const envSchema = z.object({
+  DB_HOST: z.string().min(1),
+  DB_PORT: z.coerce.number().int().positive().default(5432),
+  DB_NAME: z.string().min(1),
+  DB_USER: z.string().min(1),
+  DB_PASSWORD: z.string().min(1),
+});
 
-// Prevent multiple pools during Next.js hot reload in dev
+const parsedEnv = envSchema.safeParse(process.env);
+if (!parsedEnv.success) {
+  throw new Error('Invalid database environment configuration.');
+}
+
+const env = parsedEnv.data;
 const globalForPg = globalThis;
 
-const pool = globalForPg._pgPool ?? new Pool(poolConfig);
+const pool =
+  globalForPg.__fleetflowPool ??
+  new Pool({
+    host: env.DB_HOST,
+    port: env.DB_PORT,
+    database: env.DB_NAME,
+    user: env.DB_USER,
+    password: env.DB_PASSWORD,
+    max: 10,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 2_000,
+  });
 
 if (process.env.NODE_ENV !== 'production') {
-  globalForPg._pgPool = pool;
+  globalForPg.__fleetflowPool = pool;
 }
 
-// ─── Query helper ─────────────────────────────────────────────
-// Usage: const { rows } = await query('SELECT * FROM users WHERE id = $1', [id])
-export async function query(text, params) {
-  const start = Date.now();
-  try {
-    const result = await pool.query(text, params);
-    const duration = Date.now() - start;
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[DB]', { text, duration: `${duration}ms`, rows: result.rowCount });
-    }
-    return result;
-  } catch (error) {
-    console.error('[DB ERROR]', { text, error: error.message });
-    throw error;
-  }
+export async function query(text, params = []) {
+  return pool.query(text, params);
 }
 
-// ─── Transaction helper ───────────────────────────────────────
-// Usage:
-//   await withTransaction(async (client) => {
-//     await client.query(...)
-//     await client.query(...)
-//   })
 export async function withTransaction(fn) {
   const client = await pool.connect();
   try {
