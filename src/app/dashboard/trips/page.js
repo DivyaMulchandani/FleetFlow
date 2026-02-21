@@ -17,6 +17,7 @@ import {
   FaCalendarAlt,
   FaClock,
   FaCheckCircle,
+  FaTimes,
   FaTimesCircle,
   FaHourglassHalf,
   FaTruckLoading,

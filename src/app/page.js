@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   FaTruck,
   FaUserCircle,
@@ -16,7 +17,19 @@ import {
   FaExclamationTriangle
 } from "react-icons/fa";
 
+function renderRoleIcon(roleValue, size, color) {
+  if (roleValue === "fleet_manager") return <FaTruck size={size} color={color} />;
+  if (roleValue === "dispatcher")
+    return <FaClipboardCheck size={size} color={color} />;
+  if (roleValue === "safety_officer")
+    return <FaShieldAlt size={size} color={color} />;
+  if (roleValue === "financial_analyst")
+    return <FaChartLine size={size} color={color} />;
+  return <FaUser size={size} color={color} />;
+}
+
 export default function AuthPage() {
+  const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -38,7 +51,11 @@ export default function AuthPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
+    if (isLogin) {
+      router.push("/dashboard/maintenance");
+      return;
+    }
+    setIsLogin(true);
   };
 
   const roles = [
@@ -47,13 +64,6 @@ export default function AuthPage() {
     { value: "safety_officer", label: "Safety Officer", icon: FaShieldAlt, color: "#4A70A9" },
     { value: "financial_analyst", label: "Financial Analyst", icon: FaChartLine, color: "#8FABD4" },
   ];
-
-  const getRoleIcon = (roleValue) => {
-    const role = roles.find(r => r.value === roleValue);
-    return role ? role.icon : FaUser;
-  };
-
-  const RoleIcon = getRoleIcon(formData.role);
 
   return (
     <div style={{
@@ -224,7 +234,7 @@ export default function AuthPage() {
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}>
-                  <RoleIcon size={20} color="white" />
+                  {renderRoleIcon(formData.role, 20, "white")}
                 </div>
                 <div>
                   <div style={{
