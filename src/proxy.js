@@ -41,7 +41,7 @@ export function proxy(request) {
   }
 
   // ── Extract token from cookie ──────────────────────────────
-  const token = request.cookies.get('fleetflow_token')?.value;
+  const token = request.cookies.get('fleetflow_session')?.value;
 
   if (!token) {
     // API routes → return 401 JSON
@@ -86,7 +86,7 @@ export function proxy(request) {
 
   // ── Pass user info in headers to route handlers ────────────
   const requestHeaders = new Headers(request.headers);
-  requestHeaders.set('x-user-id',    decoded.id);
+  requestHeaders.set('x-user-id',    decoded.userId);
   requestHeaders.set('x-user-email', decoded.email);
   requestHeaders.set('x-user-role',  decoded.role);
 

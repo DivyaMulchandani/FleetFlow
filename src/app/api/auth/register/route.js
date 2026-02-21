@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import { query } from '@/lib/db';
 import { signToken, buildAuthCookie } from '@/lib/auth';
 
@@ -78,7 +78,7 @@ export async function POST(request) {
 
     // ── 8. Sign JWT ────────────────────────────────────────────
     const token = signToken({
-      id:    user.id,
+      userId: user.id,
       email: user.email,
       role:  user.role,
     });
