@@ -1,4 +1,4 @@
-import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from 'pg';
+import { Pool } from 'pg';
 import { z } from 'zod';
 
 const databaseEnvSchema = z.object({
@@ -17,9 +17,7 @@ if (!parsedEnv.success) {
 
 const env = parsedEnv.data;
 
-const globalForPg = globalThis as typeof globalThis & {
-  __fleetflowPool?: Pool;
-};
+const globalForPg = globalThis;
 
 const pool =
   globalForPg.__fleetflowPool ??
@@ -38,16 +36,11 @@ if (env.NODE_ENV !== 'production') {
   globalForPg.__fleetflowPool = pool;
 }
 
-export async function query<T extends QueryResultRow>(
-  text: string,
-  params: readonly unknown[] = [],
-): Promise<QueryResult<T>> {
-  return pool.query<T>(text, params as unknown[]);
+export async function query(text, params = []) {
+  return pool.query(text, params);
 }
 
-export async function withTransaction<T>(
-  fn: (client: PoolClient) => Promise<T>,
-): Promise<T> {
+export async function withTransaction(fn) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

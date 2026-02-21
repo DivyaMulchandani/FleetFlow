@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { sendPasswordResetEmail } from '@/lib/email';
 import { query } from '@/lib/prisma';
@@ -10,29 +10,15 @@ const forgotPasswordSchema = z.object({
   email: z.string().email().max(150),
 });
 
-type UserRow = {
-  id: string;
-  email: string;
-  is_active: boolean;
-};
-
-type ColumnRow = {
-  column_name: string;
-};
-
 const GENERIC_SUCCESS = {
   message: 'If the account exists, a password reset link has been sent.',
 };
 
-function successResponse(data: unknown, status = 200): NextResponse {
+function successResponse(data, status = 200) {
   return NextResponse.json({ success: true, data }, { status });
 }
 
-function errorResponse(
-  code: string,
-  message: string,
-  status: number,
-): NextResponse {
+function errorResponse(code, message, status) {
   return NextResponse.json(
     {
       success: false,
@@ -42,14 +28,14 @@ function errorResponse(
   );
 }
 
-let resetTokenUsedColumnCache: 'used' | 'used_at' | null = null;
+let resetTokenUsedColumnCache = null;
 
-async function getResetTokenUsedColumn(): Promise<'used' | 'used_at'> {
+async function getResetTokenUsedColumn() {
   if (resetTokenUsedColumnCache) {
     return resetTokenUsedColumnCache;
   }
 
-  const result = await query<ColumnRow>(
+  const result = await query(
     `SELECT column_name
      FROM information_schema.columns
      WHERE table_schema = 'public'
@@ -62,11 +48,11 @@ async function getResetTokenUsedColumn(): Promise<'used' | 'used_at'> {
   return resetTokenUsedColumnCache;
 }
 
-function hashResetToken(rawToken: string): string {
+function hashResetToken(rawToken) {
   return crypto.createHash('sha256').update(rawToken, 'utf8').digest('hex');
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(request) {
   try {
     const body = await request.json();
     const parsed = forgotPasswordSchema.safeParse(body);
@@ -77,7 +63,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const email = parsed.data.email.toLowerCase().trim();
 
-    const userResult = await query<UserRow>(
+    const userResult = await query(
       `SELECT id, email, is_active
        FROM users
        WHERE email = $1

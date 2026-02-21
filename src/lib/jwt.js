@@ -1,4 +1,4 @@
-import jwt, { type JwtPayload, TokenExpiredError } from 'jsonwebtoken';
+import jwt, { TokenExpiredError } from 'jsonwebtoken';
 import { z } from 'zod';
 
 const jwtEnvSchema = z.object({
@@ -14,12 +14,6 @@ const JWT_SECRET = parsedEnv.data.JWT_SECRET;
 const JWT_EXPIRES_IN_SECONDS = 7 * 24 * 60 * 60;
 const JWT_EXPIRES_IN = '7d';
 
-export type SessionJwtPayload = {
-  userId: string;
-  role: string;
-  email: string;
-};
-
 export class InvalidTokenError extends Error {
   constructor(message = 'Invalid session token.') {
     super(message);
@@ -34,18 +28,18 @@ export class ExpiredTokenError extends Error {
   }
 }
 
-export function signToken(payload: SessionJwtPayload): string {
+export function signToken(payload) {
   return jwt.sign(payload, JWT_SECRET, {
     algorithm: 'HS256',
     expiresIn: JWT_EXPIRES_IN,
   });
 }
 
-export function verifyToken(token: string): SessionJwtPayload {
+export function verifyToken(token) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET, {
       algorithms: ['HS256'],
-    }) as JwtPayload & SessionJwtPayload;
+    });
 
     if (!decoded.userId || !decoded.role || !decoded.email) {
       throw new InvalidTokenError();

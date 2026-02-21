@@ -1,20 +1,11 @@
 import bcrypt from 'bcrypt';
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { setSessionCookie } from '@/lib/cookies';
 import { signToken } from '@/lib/jwt';
 import { query } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
-
-type LoginRow = {
-  id: string;
-  full_name: string;
-  email: string;
-  role: string;
-  is_active: boolean;
-  password_hash: string;
-};
 
 const loginSchema = z.object({
   email: z.string().email().max(150),
@@ -24,15 +15,11 @@ const loginSchema = z.object({
 const INVALID_CREDENTIALS = 'Invalid email or password.';
 const DUMMY_BCRYPT_HASH = '$2b$12$eIXvBcl6Yh2u8U3u8QJQwOv2m5V7xod8fWv6n6iHjY7n8xG7uN3QG';
 
-function successResponse(data: unknown, status = 200): NextResponse {
+function successResponse(data, status = 200) {
   return NextResponse.json({ success: true, data }, { status });
 }
 
-function errorResponse(
-  code: string,
-  message: string,
-  status: number,
-): NextResponse {
+function errorResponse(code, message, status) {
   return NextResponse.json(
     {
       success: false,
@@ -42,7 +29,7 @@ function errorResponse(
   );
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(request) {
   try {
     const body = await request.json();
     const parsed = loginSchema.safeParse(body);
@@ -55,10 +42,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const { password } = parsed.data;
 
     // Structure for future rate-limit adapter without changing handler signature.
-    const _rateLimitContext = { identifier: email, route: 'auth:login' };
-    void _rateLimitContext;
+    const rateLimitContext = { identifier: email, route: 'auth:login' };
+    void rateLimitContext;
 
-    const userResult = await query<LoginRow>(
+    const userResult = await query(
       `SELECT id, full_name, email, role, is_active, password_hash
        FROM users
        WHERE email = $1

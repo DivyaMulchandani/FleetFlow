@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { clearSessionCookie } from '@/lib/cookies';
 import { withTransaction } from '@/lib/prisma';
@@ -23,37 +23,11 @@ const resetPasswordSchema = z.object({
     .regex(/[^A-Za-z0-9]/, 'Password must include a special character.'),
 });
 
-type QueryResultRows<T> = {
-  rows: T[];
-};
-
-type QueryFn = <T>(
-  text: string,
-  params?: readonly unknown[],
-) => Promise<QueryResultRows<T>>;
-
-type ResetTokenRow = {
-  id: string;
-  user_id: string;
-  token: string;
-  expires_at: Date;
-  used?: boolean;
-  used_at?: Date | null;
-};
-
-type ColumnRow = {
-  column_name: string;
-};
-
-function successResponse(data: unknown, status = 200): NextResponse {
+function successResponse(data, status = 200) {
   return NextResponse.json({ success: true, data }, { status });
 }
 
-function errorResponse(
-  code: string,
-  message: string,
-  status: number,
-): NextResponse {
+function errorResponse(code, message, status) {
   return NextResponse.json(
     {
       success: false,
@@ -63,11 +37,11 @@ function errorResponse(
   );
 }
 
-function hashResetToken(rawToken: string): string {
+function hashResetToken(rawToken) {
   return crypto.createHash('sha256').update(rawToken, 'utf8').digest('hex');
 }
 
-function timingSafeEqualStrings(a: string, b: string): boolean {
+function timingSafeEqualStrings(a, b) {
   const aBuffer = Buffer.from(a, 'utf8');
   const bBuffer = Buffer.from(b, 'utf8');
   if (aBuffer.length !== bBuffer.length) {
@@ -76,14 +50,14 @@ function timingSafeEqualStrings(a: string, b: string): boolean {
   return crypto.timingSafeEqual(aBuffer, bBuffer);
 }
 
-let resetTokenUsedColumnCache: 'used' | 'used_at' | null = null;
+let resetTokenUsedColumnCache = null;
 
-async function getResetTokenUsedColumn(query: QueryFn): Promise<'used' | 'used_at'> {
+async function getResetTokenUsedColumn(query) {
   if (resetTokenUsedColumnCache) {
     return resetTokenUsedColumnCache;
   }
 
-  const result = await query<ColumnRow>(
+  const result = await query(
     `SELECT column_name
      FROM information_schema.columns
      WHERE table_schema = 'public'
@@ -96,13 +70,9 @@ async function getResetTokenUsedColumn(query: QueryFn): Promise<'used' | 'used_a
   return resetTokenUsedColumnCache;
 }
 
-async function findActiveResetToken(
-  query: QueryFn,
-  tokenHash: string,
-  usedColumn: 'used' | 'used_at',
-): Promise<ResetTokenRow | null> {
+async function findActiveResetToken(query, tokenHash, usedColumn) {
   if (usedColumn === 'used') {
-    const result = await query<ResetTokenRow>(
+    const result = await query(
       `SELECT id, user_id, token, expires_at, used
        FROM password_reset_tokens
        WHERE token = $1
@@ -115,7 +85,7 @@ async function findActiveResetToken(
     return result.rows[0] ?? null;
   }
 
-  const result = await query<ResetTokenRow>(
+  const result = await query(
     `SELECT id, user_id, token, expires_at, used_at
      FROM password_reset_tokens
      WHERE token = $1
@@ -128,7 +98,7 @@ async function findActiveResetToken(
   return result.rows[0] ?? null;
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
+export async function POST(request) {
   try {
     const body = await request.json();
     const parsed = resetPasswordSchema.safeParse(body);
@@ -141,14 +111,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const tokenHash = hashResetToken(token);
 
     const result = await withTransaction(async (client) => {
-      const clientQuery: QueryFn = (text, params = []) =>
-        client.query(text, params as unknown[]);
+      const clientQuery = (text, params = []) => client.query(text, params);
 
       const usedColumn = await getResetTokenUsedColumn(clientQuery);
       const resetRecord = await findActiveResetToken(clientQuery, tokenHash, usedColumn);
 
       if (!resetRecord || !timingSafeEqualStrings(tokenHash, resetRecord.token)) {
-        return { ok: false as const };
+        return { ok: false };
       }
 
       const newPasswordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
@@ -174,17 +143,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
       }
 
-      return { ok: true as const };
+      return { ok: true };
     });
 
     if (!result.ok) {
       return errorResponse('INVALID_TOKEN', 'Token is invalid or expired.', 400);
     }
 
-    const response = successResponse(
-      { message: 'Password reset successful.' },
-      200,
-    );
+    const response = successResponse({ message: 'Password reset successful.' }, 200);
 
     // Clear existing cookie in case reset is initiated from an authenticated browser.
     clearSessionCookie(response);

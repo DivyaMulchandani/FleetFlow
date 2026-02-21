@@ -1,12 +1,11 @@
 import { cookies } from 'next/headers';
-import { type NextResponse } from 'next/server';
 import { JWT_EXPIRES_IN_SECONDS } from '@/lib/jwt';
 
 export const SESSION_COOKIE_NAME = 'fleetflow_session';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-export function setSessionCookie(response: NextResponse, token: string): void {
+export function setSessionCookie(response, token) {
   response.cookies.set({
     name: SESSION_COOKIE_NAME,
     value: token,
@@ -18,7 +17,7 @@ export function setSessionCookie(response: NextResponse, token: string): void {
   });
 }
 
-export function clearSessionCookie(response: NextResponse): void {
+export function clearSessionCookie(response) {
   response.cookies.set({
     name: SESSION_COOKIE_NAME,
     value: '',
@@ -30,7 +29,7 @@ export function clearSessionCookie(response: NextResponse): void {
   });
 }
 
-export async function getSessionToken(): Promise<string | null> {
+export async function getSessionToken() {
   const cookieStore = await cookies();
   return cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
 }

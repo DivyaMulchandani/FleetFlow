@@ -1,37 +1,21 @@
 import { getSessionToken } from '@/lib/cookies';
 import { query } from '@/lib/prisma';
-import { signToken, verifyToken, JWT_EXPIRES_IN_SECONDS, type SessionJwtPayload } from '@/lib/jwt';
+import { signToken, verifyToken, JWT_EXPIRES_IN_SECONDS } from '@/lib/jwt';
 
-type UserRow = {
-  id: string;
-  full_name: string;
-  email: string;
-  role: string;
-  is_active: boolean;
-};
-
-export type CurrentUser = {
-  id: string;
-  full_name: string;
-  email: string;
-  role: string;
-  is_active: boolean;
-};
-
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+export async function getCurrentUser() {
   const token = await getSessionToken();
   if (!token) {
     return null;
   }
 
-  let payload: SessionJwtPayload;
+  let payload;
   try {
     payload = verifyToken(token);
   } catch {
     return null;
   }
 
-  const userResult = await query<UserRow>(
+  const userResult = await query(
     `SELECT id, full_name, email, role, is_active
      FROM users
      WHERE id = $1 AND email = $2
@@ -47,7 +31,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   return user;
 }
 
-export function buildAuthCookie(token: string): string {
+export function buildAuthCookie(token) {
   const isProd = process.env.NODE_ENV === 'production';
   return [
     `fleetflow_session=${token}`,
@@ -61,7 +45,7 @@ export function buildAuthCookie(token: string): string {
     .join('; ');
 }
 
-export function buildClearCookie(): string {
+export function buildClearCookie() {
   const isProd = process.env.NODE_ENV === 'production';
   return [
     'fleetflow_session=',

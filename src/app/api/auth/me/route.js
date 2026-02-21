@@ -5,23 +5,11 @@ import { query } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 
-type MeRow = {
-  id: string;
-  full_name: string;
-  email: string;
-  role: string;
-  is_active: boolean;
-};
-
-function successResponse(data: unknown, status = 200): NextResponse {
+function successResponse(data, status = 200) {
   return NextResponse.json({ success: true, data }, { status });
 }
 
-function errorResponse(
-  code: string,
-  message: string,
-  status: number,
-): NextResponse {
+function errorResponse(code, message, status) {
   return NextResponse.json(
     {
       success: false,
@@ -31,7 +19,7 @@ function errorResponse(
   );
 }
 
-export async function GET(): Promise<NextResponse> {
+export async function GET() {
   try {
     const token = await getSessionToken();
     if (!token) {
@@ -48,7 +36,7 @@ export async function GET(): Promise<NextResponse> {
       return errorResponse('UNAUTHORIZED', 'Invalid session token.', 401);
     }
 
-    const userResult = await query<MeRow>(
+    const userResult = await query(
       `SELECT id, full_name, email, role, is_active
        FROM users
        WHERE id = $1 AND email = $2
