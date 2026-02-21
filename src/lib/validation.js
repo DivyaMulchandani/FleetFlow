@@ -122,6 +122,83 @@ export const tripFuelCreateSchema = z.object({
   odometer_km: z.coerce.number().min(0).optional(),
 });
 
+export const maintenanceCreateSchema = z.object({
+  vehicle_id: z.string().uuid(),
+  service_type: z.string().trim().max(100).optional(),
+  description: z.string().trim().min(1).max(1000),
+  vendor_name: z.string().trim().max(150).optional(),
+  cost: z.coerce.number().positive(),
+  service_date: z.string().datetime().or(z.string().date()).optional(),
+  completed_date: z.string().datetime().or(z.string().date()).nullable().optional(),
+  odometer_at_service: z.coerce.number().min(0).optional(),
+  next_service_km: z.coerce.number().min(0).optional(),
+});
+
+export const maintenanceUpdateSchema = z
+  .object({
+    service_type: z.string().trim().max(100).optional(),
+    description: z.string().trim().min(1).max(1000).optional(),
+    vendor_name: z.string().trim().max(150).nullable().optional(),
+    cost: z.coerce.number().positive().optional(),
+    service_date: z.string().datetime().or(z.string().date()).optional(),
+    odometer_at_service: z.coerce.number().min(0).optional(),
+    next_service_km: z.coerce.number().min(0).optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'At least one field must be provided.',
+  });
+
+export const maintenanceCompleteSchema = z.object({
+  completed_date: z.string().datetime().or(z.string().date()),
+});
+
+export const fuelCreateSchema = z.object({
+  trip_id: z.string().uuid().nullable().optional(),
+  vehicle_id: z.string().uuid(),
+  fuel_date: z.string().datetime().or(z.string().date()).optional(),
+  liters: z.coerce.number().positive(),
+  cost_per_liter: z.coerce.number().positive(),
+  total_cost: z.coerce.number().positive(),
+  fuel_station: z.string().trim().max(150).optional(),
+  odometer_km: z.coerce.number().min(0).optional(),
+});
+
+export const fuelUpdateSchema = z
+  .object({
+    fuel_date: z.string().datetime().or(z.string().date()).optional(),
+    liters: z.coerce.number().positive().optional(),
+    cost_per_liter: z.coerce.number().positive().optional(),
+    total_cost: z.coerce.number().positive().optional(),
+    fuel_station: z.string().trim().max(150).nullable().optional(),
+    odometer_km: z.coerce.number().min(0).nullable().optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'At least one field must be provided.',
+  });
+
+export const safetyIncidentCreateSchema = z.object({
+  driver_id: z.string().uuid(),
+  trip_id: z.string().uuid().nullable().optional(),
+  incident_type: z.string().trim().min(1).max(100),
+  description: z.string().trim().min(1).max(1000),
+  severity: incidentSeveritySchema,
+  score_deduction: z.coerce.number().gt(0).lte(100),
+  incident_date: z.string().datetime().or(z.string().date()).optional(),
+});
+
+export const safetyIncidentUpdateSchema = z
+  .object({
+    trip_id: z.string().uuid().nullable().optional(),
+    incident_type: z.string().trim().min(1).max(100).optional(),
+    description: z.string().trim().min(1).max(1000).optional(),
+    severity: incidentSeveritySchema.optional(),
+    score_deduction: z.coerce.number().gt(0).lte(100).optional(),
+    incident_date: z.string().datetime().or(z.string().date()).optional(),
+  })
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'At least one field must be provided.',
+  });
+
 export function parseUuidParam(value) {
   const parsed = uuidParamSchema.safeParse(value);
   if (!parsed.success) {

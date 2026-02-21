@@ -22,6 +22,17 @@ export function verifyToken(token) {
   return verifyJwtToken(token);
 }
 
+export function getTokenFromCookies(request) {
+  const cookieStore = request?.cookies;
+  if (cookieStore && typeof cookieStore.get === 'function') {
+    return cookieStore.get('fleetflow_session')?.value ?? null;
+  }
+
+  const cookieHeader = request?.headers?.get?.('cookie') ?? '';
+  const match = cookieHeader.match(/(?:^|;\s*)fleetflow_session=([^;]+)/);
+  return match?.[1] ?? null;
+}
+
 export function buildAuthCookie(token) {
   const isProd = process.env.NODE_ENV === 'production';
   return [
@@ -51,14 +62,14 @@ export function buildClearCookie() {
 }
 
 export async function requireAuth(request) {
-  const token = request.cookies.get('fleetflow_session')?.value;
+  const token = getTokenFromCookies(request);
   if (!token) {
     throw new ApiError(401, 'UNAUTHORIZED', 'Authentication required.');
   }
 
   let payload;
   try {
-    payload = verifyJwtToken(token);
+    payload = verifyToken(token);
   } catch (error) {
     if (error instanceof ExpiredTokenError) {
       throw new ApiError(401, 'TOKEN_EXPIRED', 'Session expired.');

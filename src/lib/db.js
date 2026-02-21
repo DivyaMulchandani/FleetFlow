@@ -35,7 +35,12 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 export async function query(text, params = []) {
-  return pool.query(text, params);
+  try {
+    return await pool.query(text, params);
+  } catch (error) {
+    console.error('[DB QUERY ERROR]', error);
+    throw error;
+  }
 }
 
 export async function withTransaction(fn) {
